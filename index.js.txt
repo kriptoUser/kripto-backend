@@ -1,0 +1,57 @@
+// .env dosyasını ilk sırada yükle
+require('dotenv').config();
+
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const authRoutes = require('./routes/authRoutes');
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Auth rotaları
+app.use('/api', authRoutes);
+
+// Coin fiyatlarını çekme
+app.get('/api/price/:coinId', async (req, res) => {
+  const { coinId } = req.params;
+
+  try {
+    const response = await axios.get(
+      'https://api.coingecko.com/api/v3/simple/price',
+      {
+        params: {
+          ids: coinId,
+          vs_currencies: 'usd,try,eur',
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: 'Fiyat çekilemedi' });
+  }
+});
+
+// MongoDB bağlantısı
+console.log('👉 MONGO_URI:', process.env.MONGO_URI);
+
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('🟢 MongoDB bağlantısı başarılı');
+  })
+  .catch((err) => {
+    console.error('🔴 MongoDB bağlantı hatası:', err.message);
+    console.error('📛 Tam Hata:', err);
+  });
+
+// Sunucuyu başlat
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`✅ Backend çalışıyor: http://localhost:${PORT}`);
+});
